@@ -1,6 +1,45 @@
 import axios from 'axios';
 import nodemailer from 'nodemailer';
 
+const notifyViaTelegramBot = async ({
+  email,
+  googleCaptchaScore,
+  markedSpam,
+  message: userMessage,
+  name,
+}) => {
+  const data = JSON.stringify(
+    { email, googleCaptchaScore, markedSpam, userMessage, name },
+    null,
+    2,
+  );
+  const text = `Contact Form Message: ${data}`;
+  const result = (async () => {
+    try {
+      await axios({
+        url: `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_API_TOKEN}/sendMessage`,
+        method: 'POST',
+        data: {
+          chat_id: process.env.TELEGRAM_BOT_CHAT_ID,
+          text,
+        },
+      });
+      return { successful: true, message: '' };
+    } catch (error) {
+      let message;
+      if (error.response) {
+        message = `Telegram server responded with non 2xx code: ${error.response.data}`;
+      } else if (error.request) {
+        message = `No Telegram response received: ${error.request}`;
+      } else {
+        message = `Error setting up telegram response: ${error.message}`;
+      }
+      return { successful: false, message };
+    }
+  })();
+  return result;
+};
+
 const recaptchaValidation = async ({ recaptchaToken }) => {
   const result = await (async () => {
     try {
@@ -81,15 +120,30 @@ export default async function handler(req, res) {
     } else {
       const googleCaptchaScore = recaptchaValidationResult.message;
 
-      const sendEmailResult = await sendEmail({
+      const sendEmailPromise = sendEmail({
         email,
         googleCaptchaScore,
         markedSpam,
         message,
         name,
       });
+
+      const notifyViaTelegramBotPromise = notifyViaTelegramBot({
+        email,
+        googleCaptchaScore,
+        markedSpam,
+        message,
+        name,
+      });
+      const [sendEmailResult, notifyViaTelegramBotResult] = await Promise.all([
+        sendEmailPromise,
+        notifyViaTelegramBotPromise,
+      ]);
+
       if (!sendEmailResult.successful) {
         res.status(400).send(sendEmailResult.message);
+      } else if (!notifyViaTelegramBotResult.successful) {
+        res.status(400).send(notifyViaTelegramBotResult.message);
       } else {
         res.status(200).send('All good!');
       }
