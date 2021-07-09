@@ -13,6 +13,8 @@
 
 # gatsby-functions-netlify
 
+[![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/rodneylab/gatsby-functions-netlify)
+
 See the [Gatsby Functions on Netlify blog post on the Rodney Lab site](https://rodneylab.com/gatsby-functions-netlify/) for more on how to set this site up. Please drop questions into a comment at the bottom of that page. Here's the quick start:
 
 ## Creating a project
